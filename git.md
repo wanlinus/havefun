@@ -99,5 +99,25 @@ git revert HEAD  #将当前提交回退 在git树里面次提交和撤回前的�
 git cherry-pick C2 C4  #将两次提交的commit复制到当前(HEAD)分支下
 ```
 
+11. 撤销改变
 
+    ```bash
+    git checckout -- <filename>
+    ```
+
+12. 撤销使用add的文件,但是改变存在
+
+    ```bash
+    git reset HEAD
+    ```
+    
+13.  提交到本地仓库的代码想撤销
+    
+    ```bash
+    git reset --hard <版本号>
+    # 或者
+    git reset --hard HDAD^
+    ```
+    
+    
 
