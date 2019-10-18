@@ -1,0 +1,20 @@
+plugins {
+    id 'java'
+}
+
+group 'cn.wanli'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    maven { url 'https://repo.huaweicloud.com/repository/maven/' }
+}
+
+dependencies {
+    compile 'com.alibaba:fastjson:1.2.59'
+    compile 'com.101tec:zkclient:0.11'
+    compile 'ch.qos.logback:logback-classic:1.2.3'
+
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
