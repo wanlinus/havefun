@@ -191,6 +191,18 @@ fmt.Printf("str type %T str=%v", str, str)
 // string == base
 var b, _ = strconv.ParseBool("true")
 var i, _ = strconv.PaeseInt("33", 0, 64)
+
+//不能直接修改string的字符, 可以用一下方式
+//1 这种方式不能修改汉字
+var str string = "hello"
+arr1 := []byte(str) // 转成byte切片
+arr1[0] = 'z'
+str = string(arr1)
+
+//2 这种没有限制
+arr1 := []rune(str)
+arr[0] = '哈'
+str = string(arr1)
 ```
 
 ### 指针
@@ -466,8 +478,8 @@ func main() {
 
 func test() {
 	defer func() {
-		err := recover()
-		if err != nil {
+    // recover()是内建函数, 用于捕捉异常
+		if err := recover(); err != nil {
 			fmt.Println("err: ", err)
 		}
 	}()
@@ -475,6 +487,158 @@ func test() {
 	fmt.Println("result: ", num1/num2)
 }
 ```
+
+**自定义错误**
+
+1. error.New(): 返回一个error类型的值, 表示一个错误
+2. panic(): 内置函数, 接受一个interface{}类型的值,表示输出错误信息, 并退出程序
+
+```go
+func main() {
+	err := readConf("aaa")
+	if err != nil{
+		panic(err)
+	}
+	fmt.Println("读取文件错误")
+}
+
+func readConf(name string)(err error){
+	if !strings.HasSuffix(name,"ini") {
+		return errors.New("文件读取错误")
+	}
+	return nil
+}
+```
+
+### 数组
+
+```go
+//数组是值类型, 在默认情况下是值传递, 因此会进行拷贝
+var 变量名 [num]数据类型
+//如 var arr [10]int
+
+//四种初始化数组的方式
+var arr [3]int = [3]int{1, 2, 3}
+var arr = [3]int{5, 6, 7}
+var arr = [...]int{8, 9, 0}
+var arr = [...]int{1:10, 0:30, 3:90}
+```
+
+###切片(Slice) 
+
+```go
+//切片是数组的引用, 引用类型
+var 变量名 []类型
+// 如: var sli []int
+
+//定义
+//定义一个切片, 让切片去引用一个创建好的数组 
+var arr [5]int = [...]int {1, 2, 3, 5, 6}
+var sli = arr[1, 3] //下标从1到3
+//make type:类型, len:大小 cap:指定容量,可选>=len
+var 切片名 []type = make([], len, [cap])
+var sli []float64 = make([]float64, 5, 10)
+//直接分配
+var sli []int = []int {1, 2, 3}
+
+//获取切片长度
+len(sli)
+
+//获取切片容量
+cap(sli)
+
+//扩容
+append(sli, []int{10, 20, 20})
+append(sli, sli2...) //后面必须有3个点
+
+//copy
+copy(dst, src []Type)
+
+var sli3 = []int{1, 2, 3, 4, 5}
+var sli4 = make([]int, len(sli3))
+copy(sli4, sli3)
+sli3[0] = 9
+fmt.Println(sli3)
+fmt.Println(sli4)
+//[9 2 3 4 5]
+//[1 2 3 4 5]
+```
+
+**数组和切片**
+
+```go
+//定义并实例化切片	
+var sli []int = make([]int, 10, 50)
+fmt.Printf("sli type %T\n", sli)
+//定义并实例化数组
+var arr [10]int = *new([10]int)
+fmt.Printf("arr type %T\n", arr)
+
+//sli type []int
+//arr type [10]int
+```
+
+### 多维数组
+
+```go
+var arr = *new([4][6]int)
+//[[0 0 0 0 0 0] [0 0 0 0 0 0] [0 0 0 0 0 0] [0 0 0 0 0 0]]
+
+//遍历多维数组
+var arr = *new([4][6]int)
+for i := 0; i < len(arr); i++ {
+  for j := 0; j < len(arr[i]); j++ {
+    fmt.Printf("arr[%d][%d] %d\t", i, j, arr[i][j])
+  }
+  fmt.Println()
+}
+
+```
+
+### Map
+
+map是一种引用类型
+
+```go
+//keyType可以是多种类型, bool,数字,string,指针,channel,interface,struct,array
+//alueType和keyType类型一样
+var 变量名 map[keyType]valueType
+
+//分配空间
+var m map[string]string = make(map[string]string, 10)
+m := map[string]string{
+  "name":"wanli", "age":"18",
+}
+//增 改一样
+m["add"] = "add str"
+
+//删除map key
+delete(map, key)
+//delete(m, "hello")
+
+//查 存在ok为true,否则false
+val, ok:= m["check"]
+
+//遍历
+for k, v := range m{
+  fmt.Printf("k=%v v=%v\n", k, v)
+}
+```
+
+### Map切片
+
+```go
+//定义
+var mapsli = []map[string]string
+mapsli = make([]map[string]string, 2)
+mapsli[0] = make(map[string]string)
+```
+
+## 面向对象编程
+
+Golang也支持面向对象编程(OOP), 但是和传统的面向对象编程有区别, 并不是纯粹的面向对象编程语言, 所以应该说**Golang支持面向对象编程特性**比较准确. Golang没有**Class**, 他的OOP特性是通过**结构体**实现的. 并且去掉了继承*, *方法重载*, *构造函数*, *析构函数*, *隐藏this指针*, 这些特性是用过其他方式来实现的
+
+### 结构体
 
 
 
