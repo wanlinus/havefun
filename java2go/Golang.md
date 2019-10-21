@@ -53,7 +53,7 @@ var b string = "wanli"
 // 2. 根据值自行判定变量类型
 var num = 10.01
 
-// 3. 省略var, :=
+// 3.s 省略var, :=
 name := "wanli"
 ```
 
@@ -524,7 +524,7 @@ var arr = [...]int{8, 9, 0}
 var arr = [...]int{1:10, 0:30, 3:90}
 ```
 
-###切片(Slice) 
+### 切片(Slice) 
 
 ```go
 //切片是数组的引用, 引用类型
@@ -639,6 +639,42 @@ mapsli[0] = make(map[string]string)
 Golang也支持面向对象编程(OOP), 但是和传统的面向对象编程有区别, 并不是纯粹的面向对象编程语言, 所以应该说**Golang支持面向对象编程特性**比较准确. Golang没有**Class**, 他的OOP特性是通过**结构体**实现的. 并且去掉了继承*, *方法重载*, *构造函数*, *析构函数*, *隐藏this指针*, 这些特性是用过其他方式来实现的
 
 ### 结构体
+
+```go
+//定义结构体
+type StructType struct{
+	field1 Type
+  field2 Type
+  ...
+}
+
+type Dog struct{
+  Name string
+  Age int
+  Color string
+}
+
+//使用结构体
+var dog Dog
+dog.Name="旺财"
+dog.Age=2
+fmt.Println(dog)
+
+dog := Dog{Name:"旺财", Age:2}
+```
+
+Golang中结构体是值类型, 可以不用先初始化,默认为零值, 指针, slice,和map的零值都是nil, 即还没有分配空间, `has a`
+
+```go
+type Dog struct{
+  Name string
+  Age int
+}
+
+func main(){
+  var dog Dog = *new(Dog)
+}
+```
 
 
 
