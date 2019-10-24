@@ -462,8 +462,6 @@ fmt.Printf("类型:%T, i的值%v, i地址的值%v, i指向的值%v", i, i, &i, *
 
 
 //make 用来分配内存, 主要分配引用类型, chan, map, slice
-
-
 ```
 
 ### 错误处理
@@ -655,12 +653,19 @@ type Dog struct{
 }
 
 //使用结构体
+//1
 var dog Dog
 dog.Name="旺财"
 dog.Age=2
 fmt.Println(dog)
-
+//2
 dog := Dog{Name:"旺财", Age:2}
+//3
+var d *Dog = new(Dog)
+//下面这样写是标准的写法
+(*d).Name = "旺财"
+//下面是golang做了简化
+d.Name = "旺财"
 ```
 
 Golang中结构体是值类型, 可以不用先初始化,默认为零值, 指针, slice,和map的零值都是nil, 即还没有分配空间, `has a`
@@ -676,5 +681,88 @@ func main(){
 }
 ```
 
+struct互相转换字段必须完全一样
 
+struct可以在每个字段上架一个tag, 该tag可以使用反射机制获取,常用语序列化和反序列化
 
+```go
+type Master string{
+  Name string `json:name`
+  Skill string `json:skill`
+}
+```
+
+### 方法
+
+Golang中的方法是作用在指定数据类型上的, 即和指定数据类型绑定.
+
+```go
+//首先要有自定义类型
+type 自定义类型 Type{}
+
+func (类型引用 自定义类型) 方法名(传入参数)(返回值){
+	方法体
+  return 返回值
+}
+
+//e.g
+type Person struct{
+  Name string `json:"name"`
+  Age int			`json:"age"` 
+}
+//将eat方法和Person绑定, 只能通过Person调用, 在这里p只是调用之的拷贝
+func (p Person) eat(){
+  fmt.Println("我的名字是: ", p.Name)
+}
+```
+
+用指针还是值传递
+
+```go
+//定义一个结构体
+type Point struct{
+  X int `json:"x"`
+  Y int `json:"y"`
+}
+//定义两个方法
+func (p Point) AlterValue(){
+  p.X = 10
+  p.Y = 10
+}
+
+func (p *Point) AlterPointer(){
+  (*p).X = 20
+  p.Y = 20
+}
+
+func main(){
+	point := Point{1,1}
+	point.AlterValue()
+	fmt.Printf("alter value point: x:%v, y:%v\n", point.X, point.Y)
+  //(&point).AlterPointer() //标准使用地址调用
+	point.AlterPointer()
+	fmt.Printf("alter value point: x:%v, y:%v\n", point.X, point.Y)
+}
+
+//结果
+alter value point: x:1, y:1
+alter value point: x:20, y:20
+```
+
+如果方法实现了String()这个方法, 那么调用fmt.Println()的时候就会自动去调用String()方法
+
+**方法和函数的区别**
+
+1. 调用方式不同
+2. 对于普通函数, 接受者是什么类型传入值必须一样, 方法不同
+3. 方法的接受者为值类型时, 可以用指针类型调用
+
+#### 工厂模式
+
+Golang没有构造函数, 通常使用工厂模式来解决这个问题
+
+#### 三大特性
+
+**封装 继承 多态**
+
+使用struct将字段首字母小写, 提供首字母大写的方法实现对外暴露, golang在开发中没有特别强调封装.对面向对象做了简化
