@@ -67,6 +67,13 @@ docker run --name some-nginx -v /some/content:/usr/share/nginx/html:ro -d nginx
 
    - 使用外置数据库
 
+## MongoDB
+
+- ```bash
+  docker run -d -p 27017:27017 -v mongo_configdb:/data/configdb -v mongo_db:/data/db --name mongo mongo
+  ```
+
+
 ## 使用远端docker server
 
 ```bash
