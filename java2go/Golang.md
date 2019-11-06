@@ -766,3 +766,284 @@ Golang没有构造函数, 通常使用工厂模式来解决这个问题
 **封装 继承 多态**
 
 使用struct将字段首字母小写, 提供首字母大写的方法实现对外暴露, golang在开发中没有特别强调封装.对面向对象做了简化
+
+#### 继承
+
+解决代码复用的问题, 让我们的编程更加靠近人类思维, 使用匿名结构体实现. 如果一个struct嵌套了另一个
+
+匿名结构体, 那么这个结构体就可以直接访问匿名结构体的字段和方法
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	stu := Student{People: People{"asd", 14}, Score: 323.2}
+	stu.Score=600
+	stu.GetAge()
+}
+
+type People struct {
+	Name string
+	age  int
+}
+
+type Student struct {
+	People
+	Score float64
+}
+
+func (s *Student) GetAge(){
+	fmt.Printf("我的年龄是 %d 岁", s.age) //可以访问私有字段
+}
+```
+
+对于自有字段和继承字段同名采用就近原则, 对于多继承重名必须指定调用哪个匿名结构体
+
+### 接口(Interface)
+
+一组方法定义
+
+```go
+type Read interface{
+  method1()
+}
+```
+
+不需要显示实现, 一个自定义类型需要将某个接口的所有方法都实现了,才能说这个自定义类型实现了这个接口. 只要是自定义类型都可以实现接口
+
+interface是引用类型
+
+所有类型都实现了空接口(`interface{}`)
+
+
+
+**继承的价值**: 解决代码的复用性和可维护性
+
+**接口的价值**: 设计, 规范
+
+
+
+类型断言
+
+```go
+package main
+
+import "fmt"
+
+type Point struct{
+  x int
+  y int
+}
+
+func main(){
+  var a interface{}
+  var point Point Point{1, 2}
+  a = point //ok
+  var b Point
+  b ok = a.(Point) //类型断言
+  if !ok {
+  	//转化失败
+  }
+  fmt.Println(b)
+}
+```
+
+## 文件操作
+
+使用流来处理, 主要在`os.File`
+
+```go
+f, e := os.Open("/Users/wanli/a.txt")
+defer f.Close()
+if e != nil {
+  fmt.Println("errorororo", e)
+}
+fmt.Println("file is ", f)
+```
+
+带缓冲的方式(bufio)
+
+```go
+func main() {
+	f, e := os.Open("/Users/wanli/a.txt")
+  if e != nil {
+    fmt.Println("errorororo", e)
+  }
+  defer f.Close()
+
+  reader := bufio.NewReader(f)
+
+  for {
+    str, err := reader.ReadString('\n')
+    if err == io.EOF {
+      break
+    }
+    fmt.Print("读取的值: ", str)
+  }
+  fmt.Println("文件读取结束")
+}
+```
+
+一次性读取到内存(ioutil)
+
+```go
+func main() {
+	f := "/Users/wanli/a.txt"
+	bytes, e := ioutil.ReadFile(f)
+	if e != nil {
+		fmt.Println("输出错误", e)
+	}
+	fmt.Printf("%s", string(bytes))
+}
+```
+
+写文件
+
+```go
+func main() {
+	f := "/Users/wanli/a.txt"
+	file, e := os.OpenFile(f, os.O_RDWR | os.O_APPEND, 666)
+	defer file.Close()
+	if e != nil{
+		fmt.Println("error")
+	}
+	defer file.Close()
+	writer := bufio.NewWriter(file)
+	for i := 0; i < 5;i++{
+		writer.WriteString("hahahah\n")
+	}
+	writer.Flush()
+}
+```
+
+## JSON
+
+序列化, 使用`json.Marshal()`
+
+```go
+func Marshal(v interface{}) ([]byte, error) {...}
+```
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+func main() {
+	demo := JSONDemo{12, "jsondemo"}
+	bytes, e := json.Marshal(&demo)
+	if e != nil {
+		return
+	}
+	fmt.Println(string(bytes))  //{"id":12,"name":"jsondemo"}
+}
+
+type JSONDemo struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
+```
+
+反序列化`json.Unmarshal()`
+
+```go
+func Unmarshal(data []byte, v interface{}) error {...}
+```
+
+```go
+package main
+
+import (
+	"encoding/json"
+  "fmt"
+)
+
+func main() {
+	var js = `{"a": [1,10,3], "b": [10, 22, 11,2,3,4], "c": [1,2,3,4,5]}`
+	//反序列化不需要make, 因为被封装到Unmarshal()
+	var m map[string][]int
+	err := json.Unmarshal([]byte(js), &m)
+	if err != nil {
+		return
+	}
+	fmt.Println(m)
+}
+```
+
+## Test
+
+golang 自带测试框架 testing 自带go test. 
+
+1. 测试文件必须以`_test.to`结尾, 如: `cal_test.go`
+2. 测试用例函数必须以`Test`开头, 如: `TestSum()`
+3. 形参必须是`t *testing.T`
+4. 允许有多个测试用例
+5. `go test` 运行正确无日志, 错误有日志, `go test -v` 运行正确或者错误都有日志
+
+```go
+//main.go
+package main
+
+func Sum(a, b int) int {
+  return a +b
+}
+
+//cas_test.go
+package main
+
+import "testing"
+
+func TestSum(t *testing.T) {
+	s := Sum(4, 7)
+	if  s != 11 {
+ 		t.Fatalf("执行错误 Sum(4, 7), 期望值: %v, 实际值: %v", 11,s )
+	}
+	t.Log("执行正确 Sum(4, 7)")
+
+	s2 := Sum(1, 1)
+
+	if s2 != 3{
+		t.Fatalf("执行错误 Sum(1, 1), 期望值: %v, 实际值: %v", 3, s2)
+	}
+	t.Log("执行正确 Sum(1, 1)")
+}
+
+// go test -v
+
+//=== RUN   TestSum
+//--- FAIL: TestSum (0.00s)
+//    cas_test.go:10: 执行正确 Sum(4, 7)
+//    cas_test.go:15: 执行错误 Sum(1, 1), 期望值: 3, 实际值: 2
+//FAIL
+```
+
+测试单个文件一定要带上被测试的原文件
+
+```bash
+go test -v cal_test.go cal.go
+```
+
+测试单个方法
+
+```bash
+go test -v -test.run Sum
+```
+
+## goroutine(协程)和channel(管道)
+
+- 进程和线程
+
+  进程是操作系统进行资源分配和调度的基本单位
+
+  线程是程序执行的最小单元
+
+- 并发和并行
+
+  **并发**: 多线程程序在单核上运行
+
+  **并行**: 多线程程序在多核上运行
