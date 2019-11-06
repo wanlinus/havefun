@@ -1048,4 +1048,107 @@ go test -v -test.run Sum
 
   **并行**: 多线程程序在多核上运行
   
-- 266
+- Go协程特点
+
+  - 有独立栈空间
+  - 共享程序堆空间
+  - 调度由用户控制
+  - 轻量级线程
+
+- MPG模式
+
+  - M: 操作系统的主线程
+  - P: 协程执行需要的上下文
+  - G: 协程
+
+- 设置Golang运行时的CPU数
+
+  ```go
+  runtime.NumCPU() // 返回本地机器逻辑CPU个数
+  rimetime.GOMAXPROCS(num) //设置可同时执行的最大CPU数, 并返回先前的值
+  ```
+
+- example: 使用goroutine计算1- 50的阶乘,
+
+  ```go
+  package main
+  
+  import (
+  	"fmt"
+      "runtime"
+      "time"
+  )
+  
+  var m = make(map[int]int, 10)
+  
+  func main(){
+      for i :=1; i <= 50; i++ {
+          go power(i)
+      }
+      time.Sleep(10 * time.Second)
+      fmt.Println(m)
+  }
+  
+  func power(num int){
+      res := 1
+      for i := 1; i <=num; i++{
+          res *= i
+      }
+      m[num] = res
+  }
+  
+  //fatal error: concurrent map writes
+  ```
+
+  解决方案 1.加锁 2.channel
+
+  ```go
+  //sync包提供了基本的同步基元，如互斥锁。除了Once和WaitGroup类型，大部分都是适用于低水平程序线程，高水平的同步使用channel通信更好一些。
+  package main
+  
+  import (
+  	"fmt"
+  	"sync"
+  	"time"
+  )
+  
+  var m = make(map[int]int, 10)
+  
+  //全局互斥锁
+  var lock sync.Mutex
+  
+  func main() {
+  	for i := 1; i <= 50; i++ {
+  		go power(i)
+  	}
+  	time.Sleep(1 * time.Second)
+  	//主线程不知道运行完了, 也可能是出现资源竞争
+  	lock.Lock()
+  	fmt.Println(m)
+  	lock.Unlock()
+  }
+  
+  func power(num int) {
+  	res := 1
+  	for i := 1; i <= num; i++ {
+  		res *= i
+  	}
+  	lock.Lock()
+  	m[num] = res
+  	lock.Unlock()
+  }
+  
+  //现在不报错了
+  ```
+
+  解决方案2: channel
+
+  channel就是队列
+
+  ```go
+  //1.主线程等待全部goroutine不确定
+  //2.通过全局变量加锁不利于多个协程对全局变量的读写操作
+  
+  ```
+
+  
