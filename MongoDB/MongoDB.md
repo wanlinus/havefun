@@ -94,17 +94,18 @@ MongoDB使用BSON文档将数据存在Collections中, Collections存在Databases
 
 在MongoDB中, databases保存文档型的集合
 
-切换Databases使用
+在shell中, **db**指向你当前的数据库, 输入**db**显示当前的数据库
 
 ```bash
-> use myBD
+> db 
 ```
 
-- 创建一个数据库
+这个操作应该返回
 
-  ```
-  > use myDB
-  > db.myNewCollection1.insertOne({x: 1})
-  ```
+创建一个数据库
 
-  
+```
+> use myDB
+> db.myNewCollection1.insertOne({x: 1})
+```
+
