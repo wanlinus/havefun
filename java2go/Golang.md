@@ -1151,29 +1151,29 @@ go test -v -test.run Sum
   ```
   
 #### Channel基本使用
-  
+
   ```go
   var [变量名] chan 数据类型
   //e.g
   var intChan chan int
   intChan = make(chan int, 10) // 10是容量
   ```
-  
+
   channel是引用类型, 写入的数据不能超过其容量
-  
+
   ```go
   //写入数据
   intChan <- 10
   //读取数据 
   var n2, ok = <- intChan
   ```
-  
+
   如果chan里没有数据后再次取值报 deadlock
-  
+
   关闭channel, channel可以关闭,关闭后不能往里写数据, 只能读
-  
+
   **遍历** channel支持for-range方式遍历
-  
+
   1. 遍历时, 如果channel没有关闭, 则会出现deadlock的错误
-  
+
 - 

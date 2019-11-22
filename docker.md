@@ -73,6 +73,13 @@ docker run --name some-nginx -v /some/content:/usr/share/nginx/html:ro -d nginx
 docker run -d -p 27017:27017 -v mongo_configdb:/data/configdb -v mongo_db:/data/db --name mongo mongo
 ```
 
+### RabbitMQ
+
+```bash
+docker run -d -p 5672:5672 -p 15672:15672 --name rabbitmq rabbitmq:management
+```
+
+
 
 ## 使用远端docker server
 

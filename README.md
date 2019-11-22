@@ -2,7 +2,7 @@
 
 [TOC]
 
-趁着头发还多, 在下先学为敬了
+趁着头发还多
 
 [Git常用命令](./git.md)
 
@@ -26,7 +26,4 @@
 
 
 
-## MongoDB
-
-[链接](./MongoDB.md)
-
+## [MongoDB](./MongoDB.md)
