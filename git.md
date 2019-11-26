@@ -6,20 +6,20 @@
 
 1. git仓库初始化
 
-2. ```bash
+   ```bash
    git init
    git remote add origin [url] #关联远端仓库
-```
+   ```
    
-3. 将文件添加到暂存区
+2. 将文件添加到暂存区
 
-  ```bash
-  git add filename
-  git add *
-  git add -i  #交互式天剑文件到暂存区
-  ```
+   ```bash
+   git add filename
+   git add *
+   git add -i  #交互式天剑文件到暂存区
+   ```
 
-4. 提交
+3. 提交
 
   ```bash
   git commit -m "提交信息"
@@ -28,14 +28,14 @@
   git commit -am "提交信息"
   ```
 
-5. 提交改动
+4. 提交改动
 
   ```bash
   git remote add origin <server> #将本地仓库连接到远端仓库
   git push origin master
   ```
 
-6. 分支
+5. 分支
 
   ```bash
   git branch #查看分支列表
@@ -48,7 +48,7 @@
   git checkout master  #切换到master分支 
   ```
 
-7. 暂存操作
+6. 暂存操作
 
   ```bash
    git stash #暂存当前修改
@@ -59,7 +59,7 @@
    git stash clear #清除暂存
   ```
 
-8. 回退操作
+7. 回退操作
   ```bash
   git reset --hard HEAD^ #回退到上个版本
   git reset --hard [commit_id] #回退到某个版本
@@ -67,14 +67,14 @@
   git reset HEAD file #撤回暂存区的文件修改到工作区
   ```
 
-9. 更新与合并
+8. 更新与合并
 
   ```bash
   git pull  #更新本地仓库
   git merge branch_exp  #将branch_exp合并到当前分支
   ```
 
-10. 标签
+9. 标签
 
   ```bash
   git tag #列出所有标签列表
@@ -88,7 +88,7 @@
   git push origin :refs/tags/[标签名] #从远端仓库中删除标签
   ```
 
-11. log
+10. log
 
   ```bash
   git log  #查看git提交日志
@@ -99,54 +99,54 @@
   git log --graph --oneline --decorate --all
   ```
 
-10. 其他
+11. 其他
 
-```bash
-##丢弃你在本地的所有改动与提交，可以到服务器上获取最新的版本历史，并将你本地主分支指向它
-git fetch origin
-git reset --hard origin/master
+  ```bash
+  ##丢弃你在本地的所有改动与提交，可以到服务器上获取最新的版本历史，并将你本地主分支指向它
+  git fetch origin
+  git reset --hard origin/master
 
-##压缩前5次commit
-git rebase -i HEAD~5
-:%s/pick/s/gc
-git push -f
-```
+  ##压缩前5次commit
+  git rebase -i HEAD~5
+  :%s/pick/s/gc
+  git push -f
+  ```
 
-11. 高级用法
+12. 高级用法
 
-```bash
-# bugFix是从master拉取的分支, 现在master分支有更改需要将这些更改应用到bugFix上
-git checkout master
-git checkout -b bugFix
-git checkout master
-# 在master上做改动并提交
-git checkout bugFix
-git rebase master
+  ```bash
+  # bugFix是从master拉取的分支, 现在master分支有更改需要将这些更改应用到bugFix上
+  git checkout master
+  git checkout -b bugFix
+  git checkout master
+  # 在master上做改动并提交
+  git checkout bugFix
+  git rebase master
 
-# 强制修改分支位置
-git branch -f master HEAD~3  #将master分支指向前三次提交的位置
+  # 强制修改分支位置
+  git branch -f master HEAD~3  #将master分支指向前三次提交的位置
 
-#提交回退
-git reset HEAD~2  #将当前分支回退两次提交 但是已经提交的记录还是存在
-git revert HEAD  #将当前提交回退 在git树里面次提交和撤回前的提交一样
+  #提交回退
+  git reset HEAD~2  #将当前分支回退两次提交 但是已经提交的记录还是存在
+  git revert HEAD  #将当前提交回退 在git树里面次提交和撤回前的提交一样
 
-#提交复制
-git cherry-pick C2 C4  #将两次提交的commit复制到当前(HEAD)分支下
-```
+  #提交复制
+  git cherry-pick C2 C4  #将两次提交的commit复制到当前(HEAD)分支下
+  ```
 
-12.	撤销改变
+13.	撤销改变
 
-```bash
-git checckout -- <filename>
-```
+  ```bash
+  git checckout -- <filename>
+  ```
 
-12. 撤销使用add的文件,但是改变存在
+14. 撤销使用add的文件,但是改变存在
 
     ```bash
     git reset HEAD
     ```
     
-13.  提交到本地仓库的代码想撤销
+15.  提交到本地仓库的代码想撤销
   
     ```bash
     git reset --hard <版本号>
