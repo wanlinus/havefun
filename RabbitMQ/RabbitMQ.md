@@ -302,3 +302,189 @@ public class PsReceiver1 {
 
 先运行连个接受者,再运行发送者. 会看到连个接受者都能接收到一样的消息
 
+## Exchange 交换机 转发器
+
+一方面是接收生产者的消息, 另一方面是向队列推送消息
+
+### Fanout Exchange
+
+ 不处理路由键, 只需要简单的将队列绑定到exchange上, 一个发送到exchange的消息就会被转发到该exchange绑定的私有队列上
+
+![20170512103945228](images/20170512103945228.png)
+
+### Direct Exchange
+
+会处理路由键, 也就是按需索取. 需要将一个队列绑定到exchange上, 要求该消息与一个特定的路由键**完全匹配**. 消息才会进入到该队列中
+
+![20170512105615019](images/20170512105615019.png)
+
+### Topic Exchange
+
+这种模式和Direct模式原理一样, 都是根据路由键进行消息的路由, 但是这种支持路由键的模糊匹配, 此时队列需要绑定在一个模式上/ `#`匹配一个或多个词, `*`匹配一个词
+
+![20170512111129762](images/20170512111129762.png)
+
+## Routing(Direct Exchange)
+
+订阅模式将消息广播发送到许多接受者, 这里我们将向其添加订阅子集的功能
+
+![](https://www.rabbitmq.com/img/tutorials/python-four.png)
+
+绑定是交换和队列之间的关系。可以简单地理解为：队列对来自此交换的消息感兴趣。绑定可以采取额外的`routingKey`参数.
+
+```bash
+/**
+ *
+ * 同时发送error 和 info两种消息
+ * @author wanli
+ * @date 2019-11-26 11:19
+ */
+public class RoutingSender {
+
+    private static final Logger logger = LoggerFactory.getLogger(RoutingSender.class);
+    static final String ROUTING_EXCHANGE_NAME = "routing_exchange_name";
+    static final String ROUTING_KEY_ERROR = "error";
+    static final String ROUTING_KEY_INFO = "info";
+
+    public static void main(String[] args) throws IOException, TimeoutException, InterruptedException {
+        final Connection connection = ConnectionUtils.getConnection();
+        final Channel channel = connection.createChannel();
+        channel.exchangeDeclare(ROUTING_EXCHANGE_NAME, BuiltinExchangeType.DIRECT);
+        for (int i = 0; i < 10; i++) {
+            channel.basicPublish(ROUTING_EXCHANGE_NAME, ROUTING_KEY_ERROR, null,
+                    "发送error消息".getBytes(StandardCharsets.UTF_8));
+            logger.info("send error msg");
+            channel.basicPublish(ROUTING_EXCHANGE_NAME, ROUTING_KEY_INFO, null,
+                    "发送info消息".getBytes(StandardCharsets.UTF_8));
+            logger.info("send info msg");
+            Thread.sleep(1000);
+        }
+        channel.close();
+        connection.close();
+    }
+}
+
+/**
+ * 只接收error消息
+ *
+ * @author wanli
+ * @date 2019-11-26 11:28
+ */
+public class RoutingReceiver1 {
+    private static final Logger logger = LoggerFactory.getLogger(RoutingReceiver1.class);
+    private static final String ROUTING_QUEUE_1 = "routing_queue_1";
+
+    public static void main(String[] args) throws IOException, TimeoutException {
+        final Connection connection = ConnectionUtils.getConnection();
+        final Channel channel = connection.createChannel();
+        channel.exchangeDeclare(ROUTING_EXCHANGE_NAME, BuiltinExchangeType.DIRECT);
+
+        channel.queueDeclare(ROUTING_QUEUE_1, false, false, false, null);
+        channel.basicQos(1);
+
+        channel.queueBind(ROUTING_QUEUE_1, ROUTING_EXCHANGE_NAME, ROUTING_KEY_ERROR );
+        channel.basicConsume(ROUTING_QUEUE_1, false, (consumerTag, message) -> {
+            logger.info("receive1 message {}", new String(message.getBody(), StandardCharsets.UTF_8));
+            channel.basicAck(message.getEnvelope().getDeliveryTag(), false);
+        },consumerTag -> {});
+    }
+}
+
+/**
+ * 同时接收info和error消息
+ *
+ * @author wanli
+ * @date 2019-11-26 11:28
+ */
+public class RoutingReceiver2 {
+    private static final Logger logger = LoggerFactory.getLogger(RoutingReceiver2.class);
+    private static final String ROUTING_QUEUE_2 = "routing_queue_2";
+
+    public static void main(String[] args) throws IOException, TimeoutException {
+        final Connection connection = ConnectionUtils.getConnection();
+        final Channel channel = connection.createChannel();
+        channel.exchangeDeclare(ROUTING_EXCHANGE_NAME, BuiltinExchangeType.DIRECT);
+
+        channel.queueDeclare(ROUTING_QUEUE_2, false, false, false, null);
+        channel.queueBind(ROUTING_QUEUE_2, ROUTING_EXCHANGE_NAME, ROUTING_KEY_ERROR);
+        channel.queueBind(ROUTING_QUEUE_2, ROUTING_EXCHANGE_NAME, ROUTING_KEY_INFO);
+
+        channel.basicQos(1);
+        channel.basicConsume(ROUTING_QUEUE_2, false, (consumerTag, message) -> {
+            logger.info("receive2 message {}", new String(message.getBody(), StandardCharsets.UTF_8));
+            channel.basicAck(message.getEnvelope().getDeliveryTag(), false);
+        }, consumerTag -> {
+        });
+    }
+}
+```
+
+## Topics(Topic Exchange)
+
+将路由键和某个模式匹配
+
+![](https://www.rabbitmq.com/img/tutorials/python-five.png)
+
+```java
+public class TopicsSender {
+    private static final Logger logger = LoggerFactory.getLogger(TopicsSender.class);
+    static final String TOPICS_EXCHANGE_NAME = "topics_exchange_name";
+
+    public static void main(String[] args) throws IOException, TimeoutException {
+        final Connection connection = ConnectionUtils.getConnection();
+        final Channel channel = connection.createChannel();
+        channel.basicQos(1);
+
+        channel.exchangeDeclare(TOPICS_EXCHANGE_NAME, BuiltinExchangeType.TOPIC);
+        channel.basicPublish(TOPICS_EXCHANGE_NAME, "wanli.haha",null, "topic wanli.haha msg".getBytes(StandardCharsets.UTF_8) );
+        channel.basicPublish(TOPICS_EXCHANGE_NAME, "vhsj.haha", null, "topic vhsj.haha msg".getBytes(StandardCharsets.UTF_8));
+        channel.basicPublish(TOPICS_EXCHANGE_NAME, "wanli.hehe", null, "topic wanli.hehe msg".getBytes(StandardCharsets.UTF_8));
+        logger.info("Three pieces of message were sent");
+        channel.close();
+        connection.close();
+    }
+}
+
+public class TopicReceiver1 {
+    private static final Logger logger = LoggerFactory.getLogger(TopicReceiver1.class);
+    private static final String TOPIC_RECEIVER_1 = "topic_1";
+
+    public static void main(String[] args) throws IOException, TimeoutException {
+        final Connection connection = ConnectionUtils.getConnection();
+        final Channel channel = connection.createChannel();
+
+        channel.exchangeDeclare(TOPICS_EXCHANGE_NAME, BuiltinExchangeType.TOPIC);
+        channel.queueDeclare(TOPIC_RECEIVER_1, false, false, false, null);
+        // 接收以wanli.路由键开头的消息
+        channel.queueBind(TOPIC_RECEIVER_1, TOPICS_EXCHANGE_NAME, "wanli.#");
+
+        channel.basicConsume(TOPIC_RECEIVER_1, false, (consumerTag, message) -> {
+            logger.info("receive wanli.# msg [{}]", new String(message.getBody(), StandardCharsets.UTF_8));
+            channel.basicAck(message.getEnvelope().getDeliveryTag(), false);
+        }, consumerTag -> {
+        });
+    }
+}
+
+public class TopicReceiver2 {
+    private static final Logger logger = LoggerFactory.getLogger(TopicReceiver2.class);
+    private static final String TOPIC_RECEIVER_2 = "topic_2";
+
+    public static void main(String[] args) throws IOException, TimeoutException {
+        final Connection connection = ConnectionUtils.getConnection();
+        final Channel channel = connection.createChannel();
+
+        channel.exchangeDeclare(TOPICS_EXCHANGE_NAME, BuiltinExchangeType.TOPIC);
+        channel.queueDeclare(TOPIC_RECEIVER_2, false, false, false, null);
+        //接收以.haha结尾的路由键的消息
+        channel.queueBind(TOPIC_RECEIVER_2, TOPICS_EXCHANGE_NAME, "#.haha");
+
+        channel.basicConsume(TOPIC_RECEIVER_2, false, (consumerTag, message) -> {
+            logger.info("receive #.haha msg [{}]", new String(message.getBody(), StandardCharsets.UTF_8));
+            channel.basicAck(message.getEnvelope().getDeliveryTag(), false);
+        }, consumerTag -> {
+        });
+    }
+}
+```
+
