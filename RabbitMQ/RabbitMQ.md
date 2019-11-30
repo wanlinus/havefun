@@ -223,13 +223,11 @@ public class WorkerReceiver2 {
 
 1. 消息应答
 
-   1. 
-
    ```java
-   boolean autoAck = true;
+boolean autoAck = true;
    channel.basicConsume(QUEUE_NAME, autoAck, consumer);
    ```
-
+   
    `boolean autoAck = true` 自动确认模式, 一旦rabbitmq将消息分发给消费者, 就会从内存中删除, 如果在这个时候杀死消费者, 那么将会丢失正在处理的消息
 
    `boolean autoAck = false` 手动模式, 如果有一个消费者就收交付给其他消费者. 处理完成后发送确认消息
@@ -488,3 +486,242 @@ public class TopicReceiver2 {
 }
 ```
 
+## RabbitMQ的消息确认机制(事务 + confirm)
+
+在RabbitMQ中通过持久化数据解决rabbit服务器异常的数据丢失问题, 在消息发出去后客户端有没有正常消费消息是服务器不知道的, 解决办法有两种: **AMQP事务机制**, **Comfirm**
+
+### AMQP事务机制
+
+RabbitMQ中与事务机制有关的方法有三个:
+
+1. txSelect(): 将channel设置成transation模式
+2. txCommit(): 用于提交事务
+3. txTollback(): 用于回滚事务
+
+在通过txSelect开启事务之后，我们便可以发布消息给broker代理服务器了，如果txCommit提交成功了，则消息一定到达了broker了，如果在txCommit执行之前broker异常崩溃或者由于其他原因抛出异常，这个时候我们便可以捕获异常通过txRollback()回滚事务了。
+
+```java
+//消息生产者
+public class TxSender {
+    private static final Logger logger = LoggerFactory.getLogger(TxSender.class);
+    static final String TX_QUEUE_NAME = "tx_queue";
+
+    public static void main(String[] args) throws IOException, TimeoutException {
+        final Connection connection = ConnectionUtils.getConnection();
+        final Channel channel = connection.createChannel();
+        channel.queueDeclare(TX_QUEUE_NAME, false, false, false, null);
+        channel.txSelect();
+        try {
+            channel.basicPublish("", TX_QUEUE_NAME, null, "send tx message 1".getBytes(StandardCharsets.UTF_8));
+            channel.basicPublish("", TX_QUEUE_NAME, null, "send tx message 2".getBytes(StandardCharsets.UTF_8));
+            channel.txCommit();
+            logger.info("commit");
+        } catch (Exception e) {
+            logger.info("rollback");
+            channel.txRollback();
+            e.printStackTrace();
+        }
+        channel.close();
+        connection.close();
+    }
+}
+
+//消息消费者
+public class TxReceiver {
+    private static final Logger logger = LoggerFactory.getLogger(TxReceiver.class);
+
+    public static void main(String[] args) throws IOException, TimeoutException {
+        final Connection connection = ConnectionUtils.getConnection();
+        final Channel channel = connection.createChannel();
+        channel.queueDeclare(TX_QUEUE_NAME, false, false, false, null);
+
+        channel.basicConsume(TX_QUEUE_NAME, true, (consumerTag, message) -> {
+            logger.info("Receive tx message:[{}]", new String(message.getBody(), StandardCharsets.UTF_8));
+        }, consumerTag -> {
+        });
+    }
+}
+```
+
+通过wireshark抓包,可以发现使用事务channel从打开到关闭的时间差为:18ms
+
+![image-20191130134139381](images/image-20191130134139381.png)
+
+再对比不使用事务的情况, channel从打开到关闭的时间差为:10ms
+
+![image-20191130134207098](images/image-20191130134207098.png)
+
+仅仅发送两条数据的时间差都有8ms.再看使用事务的情况, 比不使用事务多了四个消息Tx.Select ->, Tx.Select-OK <-,  Tx.Commit ->, Tx.Commit <-.
+
+对于回滚的抓包情况
+
+```java
+try {
+    channel.basicPublish("", TX_QUEUE_NAME, null, "send tx message 1".getBytes(StandardCharsets.UTF_8));
+    channel.basicPublish("", TX_QUEUE_NAME, null, "send tx message 2".getBytes(StandardCharsets.UTF_8));
+    int x = 1 / 0;
+    channel.txCommit();
+} catch (Exception e) {
+    channel.txRollback();
+}
+```
+
+![image-20191130134235226](images/image-20191130134235226.png)
+
+代码中先发送两条数据, 然后抛出异常再发送回滚信息.事务确实能解决生产者和broker之间消息的确认问题. 只有消息成功被broker接收,事务才能提交成功, 否则就是有回滚.但是事务机制会比不使用事务多四个步骤, 导致吞吐量有所降低.
+
+
+
+### Confirm模式
+
+生产者将信道(channel)设置成`confirm`, 一旦信道进入confirm模式, 所有在该信道上面发布的消息都会被指派一个唯一的ID(从1开始), 一旦消息被投送到所有匹配的队列之后, broker就会发送一个确认给生产者(包含消息的唯一ID), 这就使得生产者知道消息已经正确进入队列了, 如果消息和队列是可持久化的, 那么确认消息会将消息写入磁盘之后发出, broker回传给生产者的确认消息中deliver-tag域包含了确认消息的序列号, 此外broker也可以设置basic.ack的multiple域, 表示到这个序列号之前的所有消息已经得到处理. Confirm模式的最大好处在于他的异步.
+
+开启confirm模式`channel.confirmSelect()`, 他有三种策略
+
+1. 普通
+
+   ```java
+   channel.confirmSelect();
+   channel.basicPublish("", CONFIRM_QUEUE, null, "confirm msg".getBytes(StandardCharsets.UTF_8));
+   channel.waitForConfirmsOrDie(1000);
+   ```
+
+   和前面的示例一样发送消息, 并通过`waitForConfirmsOrDie()`方法等待对其确认. 确认消息后该方法立即返回. 如果未在超时时间内没有确认消息那么该方法将抛出错误, 通常遇到错误处理办法是记录错误信息和重试.再看wireshark的抓包数据
+
+   ![image-20191130143015895](images/image-20191130143015895.png)
+
+   在发送客户端发送数据后, broker会返回一个确认响应
+
+2. 批量
+
+   ```java
+   channel.confirmSelect();
+   channel.basicPublish("", CONFIRM_QUEUE, null, "cf msg1".getBytes(StandardCharsets.UTF_8));
+   channel.basicPublish("", CONFIRM_QUEUE, null, "cf msg2".getBytes(StandardCharsets.UTF_8));
+   channel.basicPublish("", CONFIRM_QUEUE, null, "cf msg3".getBytes(StandardCharsets.UTF_8));
+   if (!channel.waitForConfirms()) {
+       logger.info("msg send failed");
+   }
+   ```
+
+   ![image-20191130144422489](images/image-20191130144422489.png)
+
+   使用批量发送多条消息, 最后再接收ack. 批量对比单个消息发送极大的提高了吞吐量. 一个缺点是我们不知道发生故障是到底出了什么问题, 因此我们可能必须将整个批处理保存在内存中以记录有意义的内容或重新发布消息
+
+3. 异步
+
+   在一开始说过, confirm的最大优势是使用异步, 但是前面两种发送消息都是同步的.异步confirm模式的编程实现最复杂.Channel对象提供的ConfirmListener()回调方法, 提供两个参数, 一个用于消息确认, 一个用于消息未确认
+
+   ```java
+   channel.addConfirmListener((deliveryTag, multiple) -> {
+       //消息确认的代码
+   }, (deliveryTag, multiple) -> {
+       // 消息未确认的代码
+   });
+   ```
+
+   deliveryTag: 标识已经确认或未确认消息的数字
+
+   multiple: false->确认/拒绝一条消息; true->确认/拒绝序列号较低的所有消息
+
+   ```java
+   public static void async() throws IOException, TimeoutException {
+       final Connection connection = ConnectionUtils.getConnection();
+       final Channel ch = connection.createChannel();
+       ConcurrentNavigableMap<Long, String> outstandingConfirms = new ConcurrentSkipListMap<>();
+       ConfirmCallback cleanOutstandingConfirms = (deliveryTag, multiple) -> {
+           if (multiple) {
+               //清除tag以下的值
+               ConcurrentNavigableMap<Long, String> confirmed = outstandingConfirms.headMap(deliveryTag, true);
+               confirmed.clear();
+           } else {
+               outstandingConfirms.remove(deliveryTag);
+           }
+       };
+       String sendMsg = "async msg";
+       //用一个容器记录需要发送的内容
+       outstandingConfirms.put(ch.getNextPublishSeqNo(), sendMsg);
+       ch.basicPublish("", CONFIRM_QUEUE, null, sendMsg.getBytes(StandardCharsets.UTF_8));
+       ch.addConfirmListener(cleanOutstandingConfirms, (deliveryTag, multiple) -> {
+           //这里只打印日志, 通常情况还会有重试
+           logger.error("Message with body [{}] has been nack-ed, Sequence number: [{}], multiple:[{}]", sendMsg, deliveryTag, multiple);
+           cleanOutstandingConfirms.handle(deliveryTag, multiple);
+       });
+       ch.close();
+       connection.close();
+   }
+   ```
+
+   ## RPC
+
+   在微服务架构开发中经常会遇到如下场景:
+
+   service_1 有实例A, B, C, seriver_2有实例D, E, F. 当service_1的一个实例(假如是A)通过MQ发送消息给service_2的一个实例(假如是D), D在处理完消息后需要将结果返回给A而不是B或C. 使用以上的模式就会非常的麻烦. 幸好RabbitMQ给我们提供了RPC这样一个模型.
+
+   ![](https://www.rabbitmq.com/img/tutorials/python-six.png)
+
+   - 对于RPC请求, 客户端发送一条消息, 该消息具有两个属性: `replayTo`(设置为仅为该请求创建的匿名互斥队列),和`correlationId`(设置为每个请求的唯一值)
+   - Server端使用`replayTo`字段中的队列来完成工作并将带有结果的消息发送回客户端
+   - 客户端收到答复消息他会检查`correlationId`, 如果匹配他才会将相应返回给程序
+
+   ```java
+   public class RpcSender {
+       private static final Logger logger = LoggerFactory.getLogger(RpcSender.class);
+   
+       public static final String RPC_QUEUE_NAME = "rpc_queue";
+   
+       public static void main(String[] args) throws Exception {
+           final Connection connection = ConnectionUtils.getConnection();
+           final Channel channel = connection.createChannel();
+   
+           channel.queueDeclare(RPC_QUEUE_NAME, false, false, false, null);
+           final String callbackQueue = channel.queueDeclare().getQueue();
+   
+           final String corrId = UUID.randomUUID().toString();
+   
+           AMQP.BasicProperties props = new AMQP.BasicProperties()
+                   .builder()
+                   .correlationId(corrId)
+                   .replyTo(callbackQueue)
+                   .build();
+   
+           channel.basicPublish("", RPC_QUEUE_NAME, props, "rpc".getBytes(StandardCharsets.UTF_8));
+           channel.basicConsume(callbackQueue, true, (consumerTag, message) -> {
+               if (message.getProperties().getCorrelationId().equals(corrId)) {
+                   logger.info("callback queue:[{}] msg:[{}]", callbackQueue, new String(message.getBody(), StandardCharsets.UTF_8));
+               }
+           }, consumerTag -> {
+           });
+   
+           //等待返回, 这里简单处理了
+           Thread.sleep(1000);
+           channel.close();
+           connection.close();
+       }
+   }
+   
+   //消费者
+   public class RecReceiver {
+   
+       private static final Logger logger = LoggerFactory.getLogger(RecReceiver.class);
+   
+       public static void main(String[] args) throws Exception {
+           final Connection connection = ConnectionUtils.getConnection();
+           final Channel channel = connection.createChannel();
+   
+           channel.queueDeclare(RPC_QUEUE_NAME, false, false, false, null);
+           channel.basicQos(1);
+   
+           channel.basicConsume(RPC_QUEUE_NAME, false, (consumerTag, message) -> {
+               AMQP.BasicProperties replyProps = new AMQP.BasicProperties.Builder()
+                       .correlationId(message.getProperties().getCorrelationId()).build();
+               logger.info("receive msg: [{}]", new String(message.getBody(), StandardCharsets.UTF_8));
+               channel.basicPublish("", message.getProperties().getReplyTo(), replyProps, "response".getBytes(StandardCharsets.UTF_8));
+               channel.basicAck(message.getEnvelope().getDeliveryTag(), false);
+           }, consumerTag -> {
+           });
+       }
+   }
+   ```
+
+   
