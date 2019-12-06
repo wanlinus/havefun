@@ -23,7 +23,7 @@
 这个项目基本上是使用markdown文档, 推荐使用[Typora](https://www.typora.io/)
 
 ```bash
-$ git clone https://github.com/wanlinus/havefun
+$ git clone https://github.com/wanlinus/havefun.git
 ```
 
 ## 主要内容
@@ -44,7 +44,7 @@ $ git clone https://github.com/wanlinus/havefun
 
 [RabbitMQ](./RabbitMQ/RabbitMQ.md)
 
-[ArchLinux](./Arch Linux.md)
+[Arch Linux](./Arch%20Linux.md)
 
 ## 相关仓库
 
