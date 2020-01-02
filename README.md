@@ -28,6 +28,8 @@ $ git clone https://github.com/wanlinus/havefun.git
 
 ## 主要内容
 
+[Arch Linux](./Arch%20Linux.md)
+
 [Git常用命令](./git.md)
 
 [Docker常用命令](./docker.md)
@@ -44,7 +46,9 @@ $ git clone https://github.com/wanlinus/havefun.git
 
 [RabbitMQ](./RabbitMQ/RabbitMQ.md)
 
-[Arch Linux](./Arch%20Linux.md)
+[分布式 CAP/BASE](./distributed/从ACID到CAP和BASE.md)
+
+
 
 ## 相关仓库
 
