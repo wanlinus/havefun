@@ -1,30 +1,30 @@
-### git常用名命令
+# git常用名命令
 
-[toc]
+[TOC]
 
-​	注:  `[]`必填 
+注: `[]`必填
 
 1. git仓库初始化
 
-   ```bash
-   git init
-   git remote add origin [url] #关联远端仓库
-   ```
-   
+  ```bash
+  git init
+  git remote add origin [url] #关联远端仓库
+  ```
+
 2. 将文件添加到暂存区
 
-   ```bash
-   git add filename
-   git add *
-   git add -i  #交互式天剑文件到暂存区
-   ```
+  ```bash
+  git add filename
+  git add *
+  git add -i  #交互式天剑文件到暂存区
+  ```
 
 3. 提交
 
   ```bash
   git commit -m "提交信息"
   
-  ## 添加文件并提交 前提是文件之前已经add 
+  ## 添加文件并提交 前提是文件之前已经add
   git commit -am "提交信息"
   ```
 
@@ -45,7 +45,7 @@
   git branch -d [feature_x]  #删除分支
   git branch -D [branch_name] #强行删除分支
   git checkout -b [feature_x] #创建并切换到新分支
-  git checkout master  #切换到master分支 
+  git checkout master  #切换到master分支
   ```
 
 6. 暂存操作
@@ -60,6 +60,7 @@
   ```
 
 7. 回退操作
+
   ```bash
   git reset --hard HEAD^ #回退到上个版本
   git reset --hard [commit_id] #回退到某个版本
@@ -122,6 +123,7 @@
   # 在master上做改动并提交
   git checkout bugFix
   git rebase master
+  git rebase [parent] <target>
 
   # 强制修改分支位置
   git branch -f master HEAD~3  #将master分支指向前三次提交的位置
@@ -142,17 +144,14 @@
 
 14. 撤销使用add的文件,但是改变存在
 
-    ```bash
-    git reset HEAD
-    ```
-    
-15.  提交到本地仓库的代码想撤销
-  
-    ```bash
-    git reset --hard <版本号>
-    # 或者
-    git reset --hard HDAD^
-    ```
-    
-    
+  ```bash
+  git reset HEAD
+  ```
 
+15. 提交到本地仓库的代码想撤销
+
+  ```bash
+  git reset --hard <版本号>
+  # 或者
+  git reset --hard HDAD^
+  ```
