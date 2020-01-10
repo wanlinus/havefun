@@ -46,6 +46,8 @@
   git branch -D [branch_name] #强行删除分支
   git checkout -b [feature_x] #创建并切换到新分支
   git checkout master  #切换到master分支
+
+  git branch -f master HEAD~3 #强制修改master分支位置
   ```
 
 6. 暂存操作
@@ -73,6 +75,8 @@
   ```bash
   git pull  #更新本地仓库
   git merge branch_exp  #将branch_exp合并到当前分支
+
+  git pull --rebase #拉取最新分支并且rebase
   ```
 
 9. 标签
