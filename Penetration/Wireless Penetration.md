@@ -286,7 +286,7 @@ PHY	Interface	Driver		Chipset
 phy3	wlan0		88XXau		Realtek Semiconductor Corp. RTL8812AU 802.11a/b/g/n/ac 2T2R DB WLAN Adapter
  (monitor mode enabled)
 #定位AP
-root@kali:~# airmon-ng wlan0
+root@kali:~# airodump-ng wlan0
  CH 11 ][ Elapsed: 48 s ][ 2019-11-23 20:31                                         
                                                                                          
  BSSID             PWR  Beacons #Data, #/s  CH  MB   ENC CIPHER AUTH ESSID
